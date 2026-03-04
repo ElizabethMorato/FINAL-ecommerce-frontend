@@ -107,8 +107,14 @@
         const id = parseInt(sel.dataset.id);
         const newStatus = parseInt(sel.value);
         try {
-          await updateOrder(id, { status: newStatus });
           const order = orders.find(o => o.id_key === id);
+          await updateOrder(id, {
+            total: order.total,
+            delivery_method: order.delivery_method,
+            status: newStatus,
+            client_id: order.client_id,
+            bill_id: order.bill_id
+          });
           if (order) order.status = newStatus;
           toast(`Pedido #${id} → ${ORDER_STATUS[newStatus]}`, "success");
           renderTable();
