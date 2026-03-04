@@ -249,7 +249,7 @@
       });
     }
   } catch(e) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="bi bi-exclamation-circle"></i><h3>Error al cargar productos</h3><p>Verificá que el backend esté corriendo en localhost:8000</p></div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="bi bi-exclamation-circle"></i><h3>Error al cargar productos</h3><p>Error de conexión. Intentá recargar la página.</p></div>`;
   }
 
   function productCardHtml(p, catMap) {

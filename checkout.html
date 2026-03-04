@@ -231,6 +231,19 @@
       const billNum = `BILL-${Date.now()}`;
 
       // 1. Crear factura
+      // 1. Verificar stock ANTES de crear nada
+      const { getProduct } = await import("./js/api.js");
+      for (const item of cart) {
+        const currentProduct = await getProduct(item.id_key);
+        if (currentProduct.stock < item.qty) {
+          toast(`Sin stock suficiente para "${item.name}". Disponible: ${currentProduct.stock}`, "error");
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-bag-check"></i> Confirmar pedido';
+          return;
+        }
+      }
+
+      // 2. Crear factura
       const bill = await createBill({
         bill_number: billNum,
         discount: null,
@@ -240,7 +253,7 @@
         client_id: session.id_key,
       });
 
-      // 2. Crear pedido
+      // 3. Crear pedido
       const order = await createOrder({
         total,
         delivery_method: deliveryMethod,
@@ -249,21 +262,13 @@
         bill_id: bill.id_key
       });
 
-      // 3. Crear dirección
+      // 4. Crear dirección
       if (deliveryMethod === 3) {
         await createAddress({ street, number, city, client_id: session.id_key }).catch(() => {});
       }
 
-      // 4. Verificar stock actual y crear detalles
-      const { getProduct } = await import("./js/api.js");
+      // 5. Crear detalles
       for (const item of cart) {
-        const currentProduct = await getProduct(item.id_key);
-        if (currentProduct.stock < item.qty) {
-          toast(`Sin stock suficiente para "${item.name}". Stock disponible: ${currentProduct.stock}`, "error");
-          btn.disabled = false;
-          btn.innerHTML = '<i class="bi bi-bag-check"></i> Confirmar pedido';
-          return;
-        }
         await createOrderDetail({
           quantity: item.qty,
           price: item.price,
