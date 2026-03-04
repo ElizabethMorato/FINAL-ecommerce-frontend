@@ -1,12 +1,23 @@
-const CART_KEY = "ofihome_cart";
+const CART_KEY_PREFIX = "ofihome_cart_";
+
+function getCartKey() {
+  try {
+    const session = JSON.parse(localStorage.getItem("ofihome_session"));
+    return session?.id_key != null ? `${CART_KEY_PREFIX}${session.id_key}` : null;
+  } catch { return null; }
+}
 
 export function getCart() {
-  try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; }
+  const key = getCartKey();
+  if (!key) return [];
+  try { return JSON.parse(localStorage.getItem(key)) || []; }
   catch { return []; }
 }
 
 function saveCart(cart) {
-  localStorage.setItem(CART_KEY, JSON.stringify(cart));
+  const key = getCartKey();
+  if (!key) return;
+  localStorage.setItem(key, JSON.stringify(cart));
   updateCartBadge();
   renderMiniCart();
 }
@@ -37,7 +48,8 @@ export function updateQty(productId, qty) {
 }
 
 export function clearCart() {
-  localStorage.removeItem(CART_KEY);
+  const key = getCartKey();
+  if (key) localStorage.removeItem(key);
   updateCartBadge();
   renderMiniCart();
 }
@@ -75,8 +87,7 @@ export function renderMiniCart() {
   }
 
   const subtotal = getCartTotal();
-  const isDetail = window.location.pathname.includes("product-detail");
-  const basePath = isDetail ? "./" : "./";
+  const basePath = "./";
 
   const itemsHtml = cart.map(i => {
     const imgUrl = i.image_url ? i.image_url.split(",")[0].trim() : "";
@@ -120,7 +131,6 @@ export function renderMiniCart() {
       <a href="${basePath}checkout.html" style="display:block;text-align:center;padding:9px;background:#000;border-radius:9px;font-size:13px;font-weight:600;text-decoration:none;color:#fff;">Comprar ahora</a>
     </div>`;
 
-  // Eventos inline para los botones
   el.querySelectorAll("[data-mc-minus]").forEach(btn => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
