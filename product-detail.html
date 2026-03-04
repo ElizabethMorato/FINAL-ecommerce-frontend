@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OfiHome — Producto</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="topbar"><div class="topbar-track" id="promoTrack"><span class="promo-item">ENVÍO GRATIS DESDE $100.000</span><span class="promo-sep">•</span><span class="promo-item">3 CUOTAS SIN INTERÉS</span><span class="promo-sep">•</span></div></div>
+  <div class="mainbar">
+    <a class="brand" href="./index.html"><div class="logo-box"><img src="./imagen/logo OfiHome.png" alt="Logo"></div><div class="brand-name">OfiHome</div></a>
+    <nav class="nav"><a href="./index.html" class="nav-link">Inicio</a><a href="./products.html" class="nav-link active">Productos</a></nav>
+    <div class="actions">
+      <button class="icon-btn" id="searchBtn"><i class="bi bi-search"></i></button>
+      <a class="icon-btn" id="userBtn" href="./login.html"><i class="bi bi-person"></i></a>
+      <div class="cart-wrapper">
+        <a class="icon-btn" id="cartBtn" href="./cart.html"><i class="bi bi-bag"></i><span id="cartCount" class="badge" style="display:none">0</span></a>
+        <div class="mini-cart-panel" id="miniCartPanel"><div class="mini-cart-header"><i class="bi bi-bag"></i> Mi carrito</div><div id="miniCart"></div></div>
+      </div>
+    </div>
+  </div>
+</header>
+<div class="search-overlay" id="searchOverlay"><div class="search-box"><input type="text" id="searchInput" placeholder="Buscar..."><p class="search-hint">Presioná Enter para buscar</p><button id="searchClose" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:22px;cursor:pointer;"><i class="bi bi-x"></i></button></div></div>
+
+<div style="padding:20px 48px;font-size:13px;color:#999;">
+  <a href="./index.html" style="color:#999;">Inicio</a> / 
+  <a href="./products.html" style="color:#999;">Productos</a> / 
+  <span id="breadcrumbName">...</span>
+</div>
+
+<div id="productContent" class="product-detail-page">
+  <div class="skeleton" style="aspect-ratio:1;border-radius:16px;"></div>
+  <div>
+    <div class="skeleton" style="height:32px;width:60%;margin-bottom:16px;"></div>
+    <div class="skeleton" style="height:48px;width:40%;margin-bottom:16px;"></div>
+    <div class="skeleton" style="height:80px;margin-bottom:16px;"></div>
+  </div>
+</div>
+
+<div style="max-width:1100px;margin:0 auto;padding:0 48px 60px;" id="reviewsSection" style="display:none;"></div>
+
+<footer class="site-footer">
+  <div class="footer-content">
+    <div class="footer-section">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <img src="./imagen/logo OfiHome.png" alt="Logo" style="width:36px;height:36px;object-fit:contain;">
+        <span class="footer-brand-name">OfiHome</span>
+      </div>
+      <p class="brand-slogan">Tu comodidad al alcance de una compra.</p>
+      <div class="social-icons">
+        <a href="#"><i class="bi bi-tiktok"></i></a>
+        <a href="#"><i class="bi bi-instagram"></i></a>
+        <a href="#"><i class="bi bi-facebook"></i></a>
+        <a href="#"><i class="bi bi-whatsapp"></i></a>
+      </div>
+    </div>
+    <div class="footer-section">
+      <h3>Navegación</h3>
+      <ul>
+        <li><a href="./index.html">Inicio</a></li>
+        <li><a href="./products.html">Productos</a></li>
+        <li><a href="./index.html#contacto">Contacto</a></li>
+      </ul>
+    </div>
+    <div class="footer-section">
+      <h3>Información</h3>
+      <ul>
+        <li><a href="#">Envíos</a></li>
+        <li><a href="#">Cambios y devoluciones</a></li>
+        <li><a href="#">Términos y condiciones</a></li>
+      </ul>
+    </div>
+    <div class="footer-section">
+      <h3>Contacto</h3>
+      <ul>
+        <li><i class="bi bi-telephone"></i> +54 9 11 6047-3025</li>
+        <li><i class="bi bi-envelope"></i> ofihome@gmail.com</li>
+        <li><i class="bi bi-geo-alt"></i> Mendoza, Argentina</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-copyright">© OfiHome 2026. Todos los derechos reservados.</div>
+</footer>
+
+<script type="module">
+  import { initHeader } from "./js/header.js";
+  import { getProduct, getCategories, getReviews, createReview } from "./js/api.js";
+  import { addToCart } from "./js/cart.js";
+  import { formatPrice, starsHtml, toast, getQueryParam, formatDate } from "./js/utils.js";
+  import { isLoggedIn } from "./js/auth.js";
+
+  initHeader();
+
+  const id = getQueryParam("id");
+  if (!id) { window.location.href = "./products.html"; }
+
+  const productImages = ["./imagen/alex-escritorio-efecto.avif","./imagen/kallax-estante-negro.avif","./imagen/raskog-carro-blanco.avif","./imagen/ampara-de-escritorio-menta.avif"];
+
+  try {
+    const [product, cats, allReviews] = await Promise.all([
+      getProduct(id), getCategories(), getReviews()
+    ]);
+    const catMap = Object.fromEntries(cats.map(c => [c.id_key, c.name]));
+    const catName = catMap[product.category_id] || "Producto";
+    const reviews = allReviews.filter(r => r.product_id == id);
+    const avgRating = reviews.length ? reviews.reduce((s,r)=>s+r.rating,0)/reviews.length : 0;
+    const img = product.image_url ? product.image_url.split(",")[0].trim() : " ";
+
+    document.title = `OfiHome — ${product.name}`;
+    document.getElementById("breadcrumbName").textContent = product.name;
+
+    const stockClass = product.stock === 0 ? "out" : product.stock < 5 ? "low" : "";
+    const stockLabel = product.stock === 0 ? "Sin stock" : product.stock < 5 ? `Solo quedan ${product.stock} unidades` : `${product.stock} en stock`;
+
+    document.getElementById("productContent").innerHTML = `
+      <div class="product-detail-gallery">
+        <div class="detail-img-main"><img src="${img}" alt="${product.name}" onerror="this.src='./imagen/kallax-estante-negro.avif'"></div>
+      </div>
+      <div>
+        <div class="detail-cat">${catName}</div>
+        <h1 class="detail-name">${product.name}</h1>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="color:#f0a500;font-size:18px;">${starsHtml(avgRating)}</span>
+          <span style="font-size:13px;color:#999;">${reviews.length} reseñas</span>
+        </div>
+        <div class="detail-price">${formatPrice(product.price)}</div>
+        <p class="detail-stock ${stockClass}">
+          <i class="bi bi-${product.stock===0?'x-circle':'check-circle'}"></i>
+          <span>${stockLabel}</span>
+        </p>
+        <div class="qty-selector">
+          <label>Cantidad:</label>
+          <div class="qty-control">
+            <button id="qtyMinus">−</button>
+            <input type="number" id="qtyInput" value="1" min="1" max="${product.stock}">
+            <button id="qtyPlus">+</button>
+          </div>
+        </div>
+        <button class="btn-detail-cart" id="addToCartBtn" ${product.stock===0?"disabled":""}>
+          <i class="bi bi-bag-plus"></i>
+          ${product.stock===0?"Sin stock disponible":"Agregar al carrito"}
+        </button>
+        <a href="./checkout.html" class="btn-secondary" style="display:block;text-align:center;padding:14px;border-radius:10px;margin-top:0;font-weight:600;" ${product.stock===0?"style='pointer-events:none;opacity:.5'":""}>
+          Comprar ahora
+        </a>
+        <div class="detail-desc" style="margin-top:28px;padding-top:20px;border-top:1px solid #e8e8e8;">
+          <h3>Descripción</h3>
+          <p>Producto de calidad premium para tu hogar u oficina. Diseñado para durar, con materiales seleccionados y acabados de primera. Ideal para espacios modernos y funcionales.</p>
+        </div>
+        <div style="margin-top:20px;display:flex;gap:20px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#666;">
+            <i class="bi bi-truck" style="font-size:18px;color:#000;"></i>
+            <span>Envío a todo el país</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#666;">
+            <i class="bi bi-shield-check" style="font-size:18px;color:#000;"></i>
+            <span>Garantía 12 meses</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#666;">
+            <i class="bi bi-arrow-return-left" style="font-size:18px;color:#000;"></i>
+            <span>30 días para devolver</span>
+          </div>
+        </div>
+      </div>`;
+
+    // Qty controls
+    const qtyInput = document.getElementById("qtyInput");
+    document.getElementById("qtyMinus").addEventListener("click", () => {
+      qtyInput.value = Math.max(1, parseInt(qtyInput.value) - 1);
+    });
+    document.getElementById("qtyPlus").addEventListener("click", () => {
+      qtyInput.value = Math.min(product.stock, parseInt(qtyInput.value) + 1);
+    });
+    document.getElementById("addToCartBtn")?.addEventListener("click", () => {
+      const qty = parseInt(qtyInput.value) || 1;
+      addToCart(product, qty);
+      toast(`${product.name} (x${qty}) agregado al carrito`, "success");
+    });
+
+    // Reviews
+    const revEl = document.getElementById("reviewsSection");
+    revEl.style.display = "";
+    revEl.innerHTML = `
+      <div class="reviews-section">
+        <h3>Reseñas (${reviews.length})</h3>
+        ${reviews.length ? reviews.map(r => `
+          <div class="review-card">
+            <div class="review-header">
+              <span class="review-stars">${starsHtml(r.rating)}</span>
+              <span class="review-date">${formatDate(new Date())}</span>
+            </div>
+            <p class="review-text">${r.comment || "Sin comentario."}</p>
+          </div>`).join("") : `<p style="color:#999;font-size:14px;">Todavía no hay reseñas. ¡Sé el primero!</p>`}
+        
+        ${isLoggedIn() ? `
+        <div class="review-form" style="margin-top:28px;">
+          <h4>Escribir una reseña</h4>
+          <div class="star-picker" id="starPicker">
+            ${[1,2,3,4,5].map(s=>`<button type="button" data-star="${s}">★</button>`).join("")}
+          </div>
+          <textarea id="reviewComment" rows="3" style="width:100%;padding:10px;border:1.5px solid #e8e8e8;border-radius:9px;font-family:inherit;font-size:14px;resize:vertical;outline:none;" placeholder="Contá tu experiencia con este producto..."></textarea>
+          <button id="submitReview" class="btn-primary" style="margin-top:12px;">Publicar reseña</button>
+        </div>` : `<p style="margin-top:20px;font-size:14px;color:#999;"><a href="./login.html" style="color:#000;font-weight:600;">Iniciá sesión</a> para dejar una reseña.</p>`}
+      </div>`;
+
+    // Star picker
+    let selectedRating = 5;
+    document.querySelectorAll("#starPicker button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        selectedRating = parseInt(btn.dataset.star);
+        document.querySelectorAll("#starPicker button").forEach((b,i) => {
+          b.classList.toggle("active", i < selectedRating);
+        });
+      });
+      if (parseInt(btn.dataset.star) <= 5) btn.classList.add("active");
+    });
+
+    document.getElementById("submitReview")?.addEventListener("click", async () => {
+      const comment = document.getElementById("reviewComment").value.trim();
+      try {
+        await createReview({ rating: selectedRating, comment, product_id: product.id_key });
+        toast("¡Reseña publicada!", "success");
+        setTimeout(() => location.reload(), 1000);
+      } catch(e) {
+        toast("Error al publicar: " + e.message, "error");
+      }
+    });
+
+  } catch(e) {
+    document.getElementById("productContent").innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <i class="bi bi-exclamation-circle"></i><h3>Producto no encontrado</h3>
+        <a href="./products.html" class="btn-primary" style="margin-top:16px;display:inline-block;">Volver al catálogo</a>
+      </div>`;
+  }
+</script>
+</body>
+</html>

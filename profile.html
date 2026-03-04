@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>OfiHome — Mi perfil</title>
+  <link rel="stylesheet" href="./css/styles.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="topbar"><div class="topbar-track" id="promoTrack"><span class="promo-item">ENVÍO GRATIS DESDE $100.000</span><span class="promo-sep">•</span><span class="promo-item">3 CUOTAS SIN INTERÉS</span><span class="promo-sep">•</span></div></div>
+  <div class="mainbar">
+    <a class="brand" href="./index.html"><div class="logo-box"><img src="./imagen/logo OfiHome.png" alt="Logo"></div><div class="brand-name">OfiHome</div></a>
+    <nav class="nav"><a href="./index.html" class="nav-link">Inicio</a><a href="./products.html" class="nav-link">Productos</a></nav>
+    <div class="actions">
+      <a class="icon-btn" id="userBtn" href="./profile.html"><i class="bi bi-person"></i></a>
+      <div class="cart-wrapper">
+        <a class="icon-btn" id="cartBtn" href="./cart.html"><i class="bi bi-bag"></i><span id="cartCount" class="badge" style="display:none">0</span></a>
+        <div class="mini-cart-panel" id="miniCartPanel"><div class="mini-cart-header"><i class="bi bi-bag"></i> Mi carrito</div><div id="miniCart"></div></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="profile-page">
+  <div class="profile-header">
+    <div class="profile-avatar" id="profileAvatar">?</div>
+    <div class="profile-info">
+      <h2 id="profileName">Cargando...</h2>
+      <p id="profileEmail"></p>
+    </div>
+    <a href="#" id="logoutBtn" class="btn-secondary" style="margin-left:auto;padding:10px 20px;font-size:14px;">
+      <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+    </a>
+  </div>
+
+  <div class="profile-tabs">
+    <button class="profile-tab active" data-tab="orders">Mis pedidos</button>
+    <button class="profile-tab" data-tab="data">Mis datos</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-orders">
+    <div id="ordersList"><div class="loading-spinner"></div></div>
+  </div>
+
+  <div class="tab-panel" id="tab-data">
+    <div style="max-width:480px;">
+      <div class="form-grid" style="gap:16px;">
+        <div class="form-group"><label>Nombre</label><input type="text" id="editName"></div>
+        <div class="form-group"><label>Apellido</label><input type="text" id="editLastname"></div>
+        <div class="form-group span2"><label>Email</label><input type="email" id="editEmail" disabled style="background:#f5f5f5;"></div>
+        <div class="form-group span2"><label>Teléfono</label><input type="tel" id="editTel"></div>
+      </div>
+      <button class="btn-primary" id="saveProfileBtn" style="margin-top:16px;">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer"><div class="footer-copyright">© OfiHome 2026. Todos los derechos reservados.</div></footer>
+
+<script type="module">
+  import { initHeader } from "./js/header.js";
+  import { getSession, requireLogin, clearSession, saveSession } from "./js/auth.js";
+  import { getOrders, getClient, updateClient } from "./js/api.js";
+  import { formatPrice, formatDate, toast } from "./js/utils.js";
+  import { ORDER_STATUS, DELIVERY_METHODS } from "./js/config.js";
+
+  requireLogin();
+  initHeader();
+
+  const session = getSession();
+
+  document.getElementById("profileName").textContent = `${session.name} ${session.lastname || ""}`;
+  document.getElementById("profileEmail").textContent = session.email;
+  document.getElementById("profileAvatar").textContent = session.name[0].toUpperCase();
+  document.getElementById("editName").value = session.name;
+  document.getElementById("editLastname").value = session.lastname || "";
+  document.getElementById("editEmail").value = session.email;
+  document.getElementById("editTel").value = session.telephone || "";
+
+  // Tabs
+  document.querySelectorAll(".profile-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".profile-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      tab.classList.add("active");
+      document.getElementById(`tab-${tab.dataset.tab}`).classList.add("active");
+    });
+  });
+
+  // Cargar pedidos
+  try {
+    const orders = await getOrders({ limit: 1000 });
+    const myOrders = orders.filter(o => o.client_id === session.id_key);
+    const el = document.getElementById("ordersList");
+    if (!myOrders.length) {
+      el.innerHTML = `
+        <div class="empty-state">
+          <i class="bi bi-bag-x"></i><h3>Sin pedidos aún</h3>
+          <p>Cuando hagas tu primera compra aparecerá acá.</p>
+          <a href="./products.html" class="btn-primary" style="display:inline-block;margin-top:16px;">Explorar productos</a>
+        </div>`;
+    } else {
+      el.innerHTML = `<div class="orders-list">` + myOrders.reverse().map(o => `
+        <div class="order-card">
+          <div class="order-meta">
+            <h4>Pedido #${o.id_key}</h4>
+            <p>${DELIVERY_METHODS[o.delivery_method] || "Entrega"} · ${formatDate(o.date)}</p>
+            <p style="font-weight:700;margin-top:4px;">${formatPrice(o.total)}</p>
+          </div>
+          <span class="order-status-badge status-${o.status}">${ORDER_STATUS[o.status]}</span>
+        </div>`).join("") + `</div>`;
+    }
+  } catch(e) {
+    document.getElementById("ordersList").innerHTML = `<p style="color:#999;font-size:14px;">No se pudieron cargar los pedidos.</p>`;
+  }
+
+  // Guardar perfil
+  document.getElementById("saveProfileBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("saveProfileBtn");
+    btn.textContent = "Guardando..."; btn.disabled = true;
+    try {
+      const updated = await updateClient(session.id_key, {
+        name: document.getElementById("editName").value.trim(),
+        lastname: document.getElementById("editLastname").value.trim(),
+        telephone: document.getElementById("editTel").value.trim(),
+      });
+      saveSession({ ...session, ...updated });
+      document.getElementById("profileName").textContent = `${updated.name} ${updated.lastname || ""}`;
+      document.getElementById("profileAvatar").textContent = updated.name[0].toUpperCase();
+      toast("Datos actualizados correctamente", "success");
+    } catch(e) {
+      toast("Error: " + e.message, "error");
+    }
+    btn.textContent = "Guardar cambios"; btn.disabled = false;
+  });
+</script>
+</body>
+</html>

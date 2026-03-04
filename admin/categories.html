@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>OfiHome Admin — Categorías</title>
+  <link rel="stylesheet" href="../css/styles.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-brand">
+      <div class="logo-box" style="width:36px;height:36px;border:2px solid #fff;border-radius:8px;overflow:hidden;"><img src="../imagen/logo OfiHome.png" alt="Logo"></div>
+      <span>OfiHome Admin</span>
+    </div>
+    <nav class="admin-nav">
+      <a href="./index.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+      <a href="./products.html"><i class="bi bi-box-seam"></i> Productos</a>
+      <a href="./orders.html"><i class="bi bi-bag-check"></i> Pedidos</a>
+      <a href="./clients.html"><i class="bi bi-people"></i> Clientes</a>
+      <a href="./categories.html" class="active"><i class="bi bi-tags"></i> Categorías</a>
+      <a href="../index.html"><i class="bi bi-arrow-left"></i> Ver tienda</a>
+      <a href="#" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+    </nav>
+  </aside>
+
+  <main class="admin-main">
+    <h1>Categorías</h1>
+    <div class="admin-table-container" style="max-width:600px;">
+      <div class="admin-table-header">
+        <h3>Categorías</h3>
+        <button class="btn-admin-add" id="addCatBtn"><i class="bi bi-plus"></i> Nueva categoría</button>
+      </div>
+      <!-- Formulario rápido -->
+      <div id="addCatForm" style="display:none;padding:16px 20px;background:#f9f9f7;border-bottom:1px solid #e8e8e8;">
+        <div style="display:flex;gap:10px;align-items:center;">
+          <input type="text" id="newCatName" placeholder="Nombre de la categoría" style="flex:1;padding:10px 14px;border:1.5px solid #e8e8e8;border-radius:8px;font-size:14px;outline:none;">
+          <button class="btn-admin-add" id="saveCatBtn">Guardar</button>
+          <button style="padding:10px;border:1.5px solid #e8e8e8;border-radius:8px;background:#fff;" id="cancelCatBtn">Cancelar</button>
+        </div>
+        <div id="catError" class="auth-error" style="margin-top:8px;"></div>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr></thead>
+        <tbody id="catsTable"><tr><td colspan="3" style="text-align:center;padding:24px;color:#999;">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import { requireAdmin, clearSession } from "../js/auth.js";
+  import { getCategories, createCategory, deleteCategory } from "../js/api.js";
+  import { toast } from "../js/utils.js";
+
+  requireAdmin();
+  document.getElementById("logoutBtn").addEventListener("click", (e) => { e.preventDefault(); clearSession(); window.location.href = "../index.html"; });
+
+  let cats = await getCategories();
+  renderTable();
+
+  function renderTable() {
+    const tbody = document.getElementById("catsTable");
+    if (!cats.length) { tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#999;padding:20px;">Sin categorías</td></tr>`; return; }
+    tbody.innerHTML = cats.map(c => `
+      <tr>
+        <td><strong>#${c.id_key}</strong></td>
+        <td>${c.name}</td>
+        <td><button class="btn-table-del" data-id="${c.id_key}"><i class="bi bi-trash3"></i> Eliminar</button></td>
+      </tr>`).join("");
+    tbody.querySelectorAll(".btn-table-del").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("¿Eliminar esta categoría? Solo se puede si no tiene productos asociados.")) return;
+        try { await deleteCategory(btn.dataset.id); toast("Categoría eliminada","success"); cats = await getCategories(); renderTable(); }
+        catch(e) { toast("No se puede eliminar: "+e.message,"error"); }
+      });
+    });
+  }
+
+  document.getElementById("addCatBtn").addEventListener("click", () => {
+    document.getElementById("addCatForm").style.display = "";
+    document.getElementById("newCatName").focus();
+  });
+  document.getElementById("cancelCatBtn").addEventListener("click", () => {
+    document.getElementById("addCatForm").style.display = "none";
+    document.getElementById("newCatName").value = "";
+  });
+  document.getElementById("saveCatBtn").addEventListener("click", async () => {
+    const name = document.getElementById("newCatName").value.trim();
+    const errEl = document.getElementById("catError");
+    if (!name) { errEl.textContent = "Ingresá un nombre"; errEl.classList.add("show"); return; }
+    try {
+      await createCategory({ name });
+      toast("Categoría creada","success");
+      document.getElementById("addCatForm").style.display = "none";
+      document.getElementById("newCatName").value = "";
+      errEl.classList.remove("show");
+      cats = await getCategories(); renderTable();
+    } catch(e) { errEl.textContent = e.message; errEl.classList.add("show"); }
+  });
+</script>
+</body>
+</html>

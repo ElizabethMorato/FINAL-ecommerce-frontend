@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>OfiHome Admin — Pedidos</title>
+  <link rel="stylesheet" href="../css/styles.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-brand">
+      <div class="logo-box" style="width:36px;height:36px;border:2px solid #fff;border-radius:8px;overflow:hidden;"><img src="../imagen/logo OfiHome.png" alt="Logo"></div>
+      <span>OfiHome Admin</span>
+    </div>
+    <nav class="admin-nav">
+      <a href="./index.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+      <a href="./products.html"><i class="bi bi-box-seam"></i> Productos</a>
+      <a href="./orders.html" class="active"><i class="bi bi-bag-check"></i> Pedidos</a>
+      <a href="./clients.html"><i class="bi bi-people"></i> Clientes</a>
+      <a href="./categories.html"><i class="bi bi-tags"></i> Categorías</a>
+      <a href="../index.html"><i class="bi bi-arrow-left"></i> Ver tienda</a>
+      <a href="#" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+    </nav>
+  </aside>
+
+  <main class="admin-main">
+    <h1>Pedidos</h1>
+
+    <!-- Stats rápidas -->
+    <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;" id="orderQuickStats"></div>
+
+    <div class="admin-table-container">
+      <div class="admin-table-header">
+        <h3>Todos los pedidos</h3>
+        <select id="filterStatus" style="padding:8px 12px;border:1.5px solid #e8e8e8;border-radius:8px;font-size:14px;outline:none;">
+          <option value="">Todos los estados</option>
+          <option value="1">Pendiente</option>
+          <option value="2">En progreso</option>
+          <option value="3">Entregado</option>
+          <option value="4">Cancelado</option>
+        </select>
+      </div>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Entrega</th><th>Estado</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="ordersTable"><tr><td colspan="7" style="text-align:center;padding:24px;color:#999;">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import { requireAdmin, clearSession } from "../js/auth.js";
+  import { getOrders, getClients, updateOrder } from "../js/api.js";
+  import { formatPrice, formatDate, toast } from "../js/utils.js";
+  import { ORDER_STATUS, DELIVERY_METHODS } from "../js/config.js";
+
+  requireAdmin();
+  document.getElementById("logoutBtn").addEventListener("click", (e) => { e.preventDefault(); clearSession(); window.location.href = "../index.html"; });
+
+  let orders = [], clients = [];
+  [orders, clients] = await Promise.all([getOrders({ limit: 1000 }), getClients({ limit: 1000 })]);
+
+  const clientMap = Object.fromEntries(clients.map(c => [c.id_key, c]));
+
+  // Quick stats
+  const statusCount = {};
+  orders.forEach(o => { statusCount[o.status] = (statusCount[o.status] || 0) + 1; });
+  const colors = { 1:"#fff8e1",2:"#e3f2fd",3:"#e8f5e9",4:"#fce4ec" };
+  const textColors = { 1:"#c57a00",2:"#1565c0",3:"#2d7a3a",4:"#e53e3e" };
+  document.getElementById("orderQuickStats").innerHTML = Object.entries(ORDER_STATUS).map(([k,v]) => `
+    <div style="background:${colors[k]};border-radius:10px;padding:12px 20px;cursor:pointer;" onclick="document.getElementById('filterStatus').value='${k}';renderTable()">
+      <div style="font-size:22px;font-weight:800;color:${textColors[k]};">${statusCount[k]||0}</div>
+      <div style="font-size:12px;color:${textColors[k]};">${v}</div>
+    </div>`).join("");
+
+  function renderTable() {
+    const filterStatus = document.getElementById("filterStatus").value;
+    let list = [...orders].reverse();
+    if (filterStatus) list = list.filter(o => o.status == filterStatus);
+
+    const tbody = document.getElementById("ordersTable");
+    if (!list.length) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#999;">Sin pedidos</td></tr>`; return; }
+
+    tbody.innerHTML = list.map(o => {
+      const c = clientMap[o.client_id];
+      return `
+        <tr>
+          <td><strong>#${o.id_key}</strong></td>
+          <td>${formatDate(o.date)}</td>
+          <td>${c ? `${c.name} ${c.lastname}` : `#${o.client_id}`}</td>
+          <td>${formatPrice(o.total)}</td>
+          <td style="font-size:12px;">${DELIVERY_METHODS[o.delivery_method]||"—"}</td>
+          <td><span class="order-status-badge status-${o.status}">${ORDER_STATUS[o.status]}</span></td>
+          <td>
+            <select class="status-change" data-id="${o.id_key}" style="padding:6px;border:1.5px solid #e8e8e8;border-radius:6px;font-size:12px;outline:none;">
+              ${Object.entries(ORDER_STATUS).map(([k,v]) => `<option value="${k}" ${o.status==k?"selected":""}>${v}</option>`).join("")}
+            </select>
+          </td>
+        </tr>`;
+    }).join("");
+
+    tbody.querySelectorAll(".status-change").forEach(sel => {
+      sel.addEventListener("change", async () => {
+        const id = parseInt(sel.dataset.id);
+        const newStatus = parseInt(sel.value);
+        try {
+          await updateOrder(id, { status: newStatus });
+          const order = orders.find(o => o.id_key === id);
+          if (order) order.status = newStatus;
+          toast(`Pedido #${id} → ${ORDER_STATUS[newStatus]}`, "success");
+          renderTable();
+        } catch(e) { toast("Error: " + e.message, "error"); }
+      });
+    });
+  }
+
+  renderTable();
+  document.getElementById("filterStatus").addEventListener("change", renderTable);
+  window.renderTable = renderTable;
+</script>
+</body>
+</html>

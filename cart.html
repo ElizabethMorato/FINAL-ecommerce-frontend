@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>OfiHome — Carrito</title>
+  <link rel="stylesheet" href="./css/styles.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="topbar"><div class="topbar-track" id="promoTrack">
+    <span class="promo-item">ENVÍO GRATIS DESDE $100.000</span><span class="promo-sep">•</span>
+    <span class="promo-item">3 CUOTAS SIN INTERÉS</span><span class="promo-sep">•</span>
+    <span class="promo-item">10% OFF POR TRANSFERENCIA</span><span class="promo-sep">•</span>
+  </div></div>
+  <div class="mainbar">
+    <a class="brand" href="./index.html"><div class="logo-box"><img src="./imagen/logo OfiHome.png" alt="Logo"></div><div class="brand-name">OfiHome</div></a>
+    <nav class="nav">
+      <a href="./index.html" class="nav-link">Inicio</a>
+      <a href="./products.html" class="nav-link">Productos</a>
+      <a href="./index.html#contacto" class="nav-link">Contacto</a>
+    </nav>
+    <div class="actions">
+      <a class="icon-btn" id="userBtn" href="./login.html"><i class="bi bi-person"></i></a>
+      <div class="cart-wrapper">
+        <a class="icon-btn" id="cartBtn" href="./cart.html"><i class="bi bi-bag"></i><span id="cartCount" class="badge" style="display:none">0</span></a>
+        <div class="mini-cart-panel" id="miniCartPanel"><div class="mini-cart-header"><i class="bi bi-bag"></i> Mi carrito</div><div id="miniCart"></div></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="cart-page">
+  <h1>Mi carrito</h1>
+  <div id="cartContent"></div>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-content">
+    <div class="footer-section">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <img src="./imagen/logo OfiHome.png" alt="Logo" style="width:36px;height:36px;object-fit:contain;">
+        <span class="footer-brand-name">OfiHome</span>
+      </div>
+      <p class="brand-slogan">Tu comodidad al alcance de una compra.</p>
+      <div class="social-icons">
+        <a href="#"><i class="bi bi-tiktok"></i></a>
+        <a href="#"><i class="bi bi-instagram"></i></a>
+        <a href="#"><i class="bi bi-facebook"></i></a>
+        <a href="#"><i class="bi bi-whatsapp"></i></a>
+      </div>
+    </div>
+    <div class="footer-section">
+      <h3>Navegación</h3>
+      <ul>
+        <li><a href="./index.html">Inicio</a></li>
+        <li><a href="./products.html">Productos</a></li>
+        <li><a href="./index.html#contacto">Contacto</a></li>
+      </ul>
+    </div>
+    <div class="footer-section">
+      <h3>Información</h3>
+      <ul>
+        <li><a href="#">Envíos</a></li>
+        <li><a href="#">Cambios y devoluciones</a></li>
+        <li><a href="#">Términos y condiciones</a></li>
+      </ul>
+    </div>
+    <div class="footer-section">
+      <h3>Contacto</h3>
+      <ul>
+        <li><i class="bi bi-telephone"></i> +54 9 11 6047-3025</li>
+        <li><i class="bi bi-envelope"></i> ofihome@gmail.com</li>
+        <li><i class="bi bi-geo-alt"></i> Mendoza, Argentina</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-copyright">© OfiHome 2026. Todos los derechos reservados.</div>
+</footer>
+
+<script type="module">
+  import { initHeader } from "./js/header.js";
+  import { getCart, removeFromCart, updateQty, getCartTotal } from "./js/cart.js";
+  import { formatPrice } from "./js/utils.js";
+
+  initHeader();
+  renderCart();
+
+  function renderCart() {
+    const cart = getCart();
+    const el = document.getElementById("cartContent");
+
+    if (!cart.length) {
+      el.innerHTML = `
+        <div class="empty-state">
+          <i class="bi bi-bag-x"></i>
+          <h3>Tu carrito está vacío</h3>
+          <p>Explorá nuestros productos y encontrá lo que necesitás.</p>
+          <a href="./products.html" class="btn-primary" style="display:inline-block;margin-top:20px;">Ver productos</a>
+        </div>`;
+      return;
+    }
+
+    const subtotal = getCartTotal();
+    const shipping = subtotal >= 100000 ? 0 : 5000;
+    const total = subtotal + shipping;
+
+    el.innerHTML = `
+      <div class="cart-layout">
+        <div class="cart-items-list" id="cartItems">
+          ${cart.map(item => {
+            const img = item.image_url ? item.image_url.split(",")[0].trim() : "";
+            const colorHtml = item.color ? `<div style="font-size:12px;color:#888;margin-top:2px;">Color: ${item.color}</div>` : "";
+            return `
+            <div class="cart-item" data-id="${item.id_key}">
+              <div class="cart-item-img">
+                ${img ? `<img src="${img}" alt="${item.name}" onerror="this.style.display='none'">` : `<div style="width:80px;height:80px;background:#f5f5f5;border-radius:10px;"></div>`}
+              </div>
+              <div style="flex:1;">
+                <div class="cart-item-name">${item.name}</div>
+                ${colorHtml}
+                <div class="cart-item-price">${formatPrice(item.price)} c/u</div>
+              </div>
+              <div class="qty-control">
+                <button class="qty-btn" data-action="minus" data-id="${item.id_key}">−</button>
+                <input type="number" class="qty-input" value="${item.qty}" min="1" max="${item.stock}" data-id="${item.id_key}"
+                  style="width:48px;text-align:center;border:none;outline:none;font-size:15px;font-weight:600;">
+                <button class="qty-btn" data-action="plus" data-id="${item.id_key}" ${item.qty >= item.stock ? "disabled" : ""}>+</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:16px;">
+                <div class="cart-item-subtotal">${formatPrice(item.price * item.qty)}</div>
+                <button class="cart-item-remove" data-id="${item.id_key}" title="Eliminar">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </div>
+            </div>`;
+          }).join("")}
+        </div>
+
+        <div class="order-summary">
+          <h3>Resumen del pedido</h3>
+          <div class="summary-row"><span>Subtotal</span><span>${formatPrice(subtotal)}</span></div>
+
+          <!-- Código postal para calcular envío -->
+          <div style="margin:12px 0;">
+            <label style="font-size:13px;font-weight:600;color:#6b6b6b;display:block;margin-bottom:6px;">
+              Calcular envío
+            </label>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="postalCode" placeholder="Código postal" maxlength="8"
+                style="flex:1;padding:9px 12px;border:1.5px solid #e8e8e8;border-radius:8px;font-size:13px;outline:none;">
+              <button id="calcShipping"
+                style="padding:9px 14px;background:#000;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;">
+                Calcular
+              </button>
+            </div>
+            <div id="shippingResult" style="font-size:12px;color:#666;margin-top:6px;"></div>
+          </div>
+
+          <div class="summary-row">
+            <span>Envío</span>
+            <span id="shippingDisplay">${shipping === 0 ? '<strong style="color:green">GRATIS</strong>' : formatPrice(shipping)}</span>
+          </div>
+          ${subtotal < 100000 ? `<div style="font-size:12px;color:#999;margin-bottom:8px;">Agregá ${formatPrice(100000 - subtotal)} más para envío gratis</div>` : ""}
+          <div class="summary-row total"><span>Total</span><span>${formatPrice(total)}</span></div>
+
+          <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px;">
+            <a href="./checkout.html" class="btn-checkout" style="text-align:center;">Continuar con la compra</a>
+            <a href="./products.html" class="btn-secondary" style="display:block;text-align:center;padding:12px;border-radius:10px;font-size:14px;">Seguir comprando</a>
+          </div>
+        </div>
+      </div>`;
+
+    // Calcular envío por código postal
+    document.getElementById("calcShipping").addEventListener("click", () => {
+      const cp = document.getElementById("postalCode").value.trim();
+      const result = document.getElementById("shippingResult");
+      if (!cp || cp.length < 4) {
+        result.textContent = "Ingresá un código postal válido.";
+        result.style.color = "#e53e3e";
+        return;
+      }
+      // Simulación: CP que empiece con 5 = Mendoza = gratis si subtotal >= 50000
+      const cpNum = parseInt(cp);
+      let shippingMsg = "";
+      if (subtotal >= 100000) {
+        shippingMsg = "✓ Envío GRATIS para tu zona";
+        result.style.color = "green";
+      } else if (cpNum >= 5000 && cpNum <= 5999) {
+        shippingMsg = "✓ Envío a Mendoza: $3.000";
+        result.style.color = "green";
+      } else if (cpNum >= 1000 && cpNum <= 1999) {
+        shippingMsg = "Envío a CABA: $5.000";
+        result.style.color = "#666";
+      } else {
+        shippingMsg = "Envío al interior: $7.000";
+        result.style.color = "#666";
+      }
+      result.textContent = shippingMsg;
+    });
+
+    // Eventos qty y remove
+    el.querySelectorAll(".cart-item-remove").forEach(btn => {
+      btn.addEventListener("click", () => { removeFromCart(parseInt(btn.dataset.id)); renderCart(); });
+    });
+    el.querySelectorAll(".qty-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = parseInt(btn.dataset.id);
+        const item = cart.find(i => i.id_key === id);
+        if (!item) return;
+        const newQty = btn.dataset.action === "plus" ? item.qty + 1 : item.qty - 1;
+        updateQty(id, newQty);
+        renderCart();
+      });
+    });
+    el.querySelectorAll(".qty-input").forEach(inp => {
+      inp.addEventListener("change", () => {
+        updateQty(parseInt(inp.dataset.id), parseInt(inp.value) || 1);
+        renderCart();
+      });
+    });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>OfiHome — Checkout</title>
+  <link rel="stylesheet" href="./css/styles.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="mainbar" style="grid-template-columns:auto 1fr auto;">
+    <a class="brand" href="./index.html"><div class="logo-box"><img src="./imagen/logo OfiHome.png" alt="Logo"></div><div class="brand-name">OfiHome</div></a>
+    <div style="text-align:center;font-size:13px;color:#999;">Compra segura <i class="bi bi-shield-lock-fill" style="color:#2d7a3a;"></i></div>
+    <a href="./cart.html" style="font-size:13px;color:#666;text-decoration:none;"><i class="bi bi-arrow-left"></i> Volver al carrito</a>
+  </div>
+</header>
+
+<div class="checkout-page">
+  <h1>Finalizar compra</h1>
+  <div id="checkoutContent"></div>
+</div>
+
+<footer class="site-footer" style="margin-top:60px;">
+  <div class="footer-content">
+    <div class="footer-section">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <img src="./imagen/logo OfiHome.png" alt="Logo" style="width:36px;height:36px;object-fit:contain;">
+        <span class="footer-brand-name">OfiHome</span>
+      </div>
+      <p class="brand-slogan">Tu comodidad al alcance de una compra.</p>
+    </div>
+    <div class="footer-section">
+      <h3>Navegación</h3>
+      <ul>
+        <li><a href="./index.html">Inicio</a></li>
+        <li><a href="./products.html">Productos</a></li>
+      </ul>
+    </div>
+    <div class="footer-section">
+      <h3>Contacto</h3>
+      <ul>
+        <li><i class="bi bi-envelope"></i> ofihome@gmail.com</li>
+        <li><i class="bi bi-geo-alt"></i> Mendoza, Argentina</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-copyright">© OfiHome 2026. Todos los derechos reservados.</div>
+</footer>
+
+<script type="module">
+  import { getCart, getCartTotal, clearCart } from "./js/cart.js";
+  import { getSession, requireLogin } from "./js/auth.js";
+  import { createBill, createOrder, createOrderDetail, createAddress } from "./js/api.js";
+  import { formatPrice, toast } from "./js/utils.js";
+  import { initHeader } from "./js/header.js";
+
+  requireLogin("./login.html");
+  initHeader();
+
+  const cart = getCart();
+  if (!cart.length) { window.location.href = "./cart.html"; }
+
+  const session = getSession();
+  const subtotal = getCartTotal();
+  const shipping = subtotal >= 100000 ? 0 : 5000;
+  const total = subtotal + shipping;
+
+  document.getElementById("checkoutContent").innerHTML = `
+    <div class="checkout-layout">
+      <div>
+        <div class="checkout-step">
+          <div class="step-title">1. Datos personales</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Nombre</label><input type="text" id="chkName" value="${session.name}" required></div>
+            <div class="form-group"><label>Apellido</label><input type="text" id="chkLastname" value="${session.lastname || ""}" required></div>
+            <div class="form-group span2"><label>Email</label><input type="email" id="chkEmail" value="${session.email}" required></div>
+          </div>
+        </div>
+
+        <div class="checkout-step">
+          <div class="step-title">2. Dirección de entrega</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Calle</label><input type="text" id="chkStreet" placeholder="Av. Rivadavia" required></div>
+            <div class="form-group"><label>Número</label><input type="text" id="chkNumber" placeholder="1234" required></div>
+            <div class="form-group span2"><label>Ciudad</label><input type="text" id="chkCity" placeholder="Mendoza" required></div>
+          </div>
+        </div>
+
+        <div class="checkout-step">
+          <div class="step-title">3. Método de entrega</div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <label style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid #e8e8e8;border-radius:10px;cursor:pointer;">
+              <input type="radio" name="delivery" value="1"> <i class="bi bi-car-front" style="font-size:20px;"></i>
+              <div><strong>Drive-thru</strong><br><span style="font-size:13px;color:#999;">Retirás con tu auto</span></div>
+            </label>
+            <label style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid #e8e8e8;border-radius:10px;cursor:pointer;">
+              <input type="radio" name="delivery" value="2"> <i class="bi bi-shop" style="font-size:20px;"></i>
+              <div><strong>Retiro en tienda</strong><br><span style="font-size:13px;color:#999;">Retirás vos mismo</span></div>
+            </label>
+            <label style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid #e8e8e8;border-radius:10px;cursor:pointer;">
+              <input type="radio" name="delivery" value="3" checked> <i class="bi bi-truck" style="font-size:20px;"></i>
+              <div><strong>Envío a domicilio</strong><br><span style="font-size:13px;color:#999;">${shipping===0?"<span style='color:green;font-weight:600;'>GRATIS</span>":formatPrice(shipping)}</span></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="checkout-step">
+          <div class="step-title">4. Método de pago</div>
+          <div class="payment-options">
+            <div class="pay-option selected" id="payCard" data-pay="card">
+              <i class="bi bi-credit-card"></i> Tarjeta
+            </div>
+            <div class="pay-option" id="payCash" data-pay="cash">
+              <i class="bi bi-cash-coin"></i> Efectivo
+            </div>
+          </div>
+
+          <!-- Formulario tarjeta -->
+          <div id="cardForm" style="margin-top:20px;display:flex;flex-direction:column;gap:14px;">
+            <div class="form-group">
+              <label style="font-size:13px;font-weight:600;color:#6b6b6b;">Número de tarjeta</label>
+              <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19"
+                style="letter-spacing:2px;">
+            </div>
+            <div class="form-group">
+              <label style="font-size:13px;font-weight:600;color:#6b6b6b;">Nombre en la tarjeta</label>
+              <input type="text" id="cardName" placeholder="Como figura en la tarjeta">
+            </div>
+            <div class="form-grid" style="gap:14px;">
+              <div class="form-group">
+                <label style="font-size:13px;font-weight:600;color:#6b6b6b;">Vencimiento</label>
+                <input type="text" id="cardExp" placeholder="MM/AA" maxlength="5">
+              </div>
+              <div class="form-group">
+                <label style="font-size:13px;font-weight:600;color:#6b6b6b;">CVV</label>
+                <input type="text" id="cardCvv" placeholder="123" maxlength="4">
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#999;margin-top:-4px;">
+              <i class="bi bi-shield-lock-fill" style="color:#2d7a3a;"></i>
+              Tus datos están protegidos con encriptación SSL
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="order-summary" style="background:#f7f7f5;">
+          <h3>Tu pedido</h3>
+          ${cart.map(i => `
+            <div class="summary-row">
+              <span style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i.name} x${i.qty}</span>
+              <span>${formatPrice(i.price * i.qty)}</span>
+            </div>`).join("")}
+          <div class="summary-row" style="border-top:1px solid #e8e8e8;padding-top:12px;margin-top:8px;">
+            <span>Subtotal</span><span>${formatPrice(subtotal)}</span>
+          </div>
+          <div class="summary-row">
+            <span>Envío</span><span>${shipping===0?"<strong style='color:green'>GRATIS</strong>":formatPrice(shipping)}</span>
+          </div>
+          <div class="summary-row total"><span>TOTAL</span><span>${formatPrice(total)}</span></div>
+          <button class="btn-place-order" id="placeOrderBtn">
+            <i class="bi bi-bag-check"></i> Confirmar pedido
+          </button>
+          <div style="text-align:center;margin-top:12px;font-size:12px;color:#999;">
+            <i class="bi bi-shield-lock-fill" style="color:#2d7a3a;"></i> Compra segura y protegida
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  // Formatear número de tarjeta
+  document.getElementById("cardNumber").addEventListener("input", (e) => {
+    let v = e.target.value.replace(/\D/g, "").substring(0, 16);
+    e.target.value = v.replace(/(.{4})/g, "$1 ").trim();
+  });
+  document.getElementById("cardExp").addEventListener("input", (e) => {
+    let v = e.target.value.replace(/\D/g, "").substring(0, 4);
+    if (v.length >= 2) v = v.substring(0,2) + "/" + v.substring(2);
+    e.target.value = v;
+  });
+
+  // Toggle pago
+  let selectedPayment = "card";
+  const cardForm = document.getElementById("cardForm");
+
+  document.getElementById("payCard").addEventListener("click", () => {
+    selectedPayment = "card";
+    document.getElementById("payCard").classList.add("selected");
+    document.getElementById("payCash").classList.remove("selected");
+    cardForm.style.display = "flex";
+  });
+  document.getElementById("payCash").addEventListener("click", () => {
+    selectedPayment = "cash";
+    document.getElementById("payCash").classList.add("selected");
+    document.getElementById("payCard").classList.remove("selected");
+    cardForm.style.display = "none";
+  });
+
+  // Confirmar pedido
+  document.getElementById("placeOrderBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("placeOrderBtn");
+    btn.disabled = true; btn.textContent = "Procesando...";
+
+    const deliveryMethod = parseInt(document.querySelector("input[name=delivery]:checked")?.value || "3");
+    const street = document.getElementById("chkStreet").value.trim();
+    const city = document.getElementById("chkCity").value.trim();
+    const number = document.getElementById("chkNumber").value.trim();
+
+    if (!street || !city) {
+      toast("Completá la dirección de entrega", "error");
+      btn.disabled = false; btn.innerHTML = '<i class="bi bi-bag-check"></i> Confirmar pedido';
+      return;
+    }
+
+    // Validar tarjeta si eligió tarjeta
+    if (selectedPayment === "card") {
+      const cardNum = document.getElementById("cardNumber").value.replace(/\s/g, "");
+      const cardName = document.getElementById("cardName").value.trim();
+      const cardExp = document.getElementById("cardExp").value.trim();
+      const cardCvv = document.getElementById("cardCvv").value.trim();
+      if (cardNum.length < 16 || !cardName || cardExp.length < 5 || cardCvv.length < 3) {
+        toast("Completá los datos de la tarjeta correctamente", "error");
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-bag-check"></i> Confirmar pedido';
+        return;
+      }
+    }
+
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const billNum = `BILL-${Date.now()}`;
+
+      // 1. Crear factura
+      const bill = await createBill({
+        bill_number: billNum,
+        discount: 0,
+        date: today,
+        total: total,
+        payment_type: selectedPayment === "card" ? "card" : "cash",
+      });
+
+      // 2. Crear pedido
+      const order = await createOrder({
+        total,
+        delivery_method: deliveryMethod,
+        status: 1,
+        client_id: session.id_key,
+        bill_id: bill.id_key
+      });
+
+      // 3. Crear dirección
+      if (deliveryMethod === 3) {
+        await createAddress({ street, number, city, client_id: session.id_key }).catch(() => {});
+      }
+
+      // 4. Crear detalles uno por uno
+      for (const item of cart) {
+        await createOrderDetail({
+          quantity: item.qty,
+          price: item.price,
+          order_id: order.id_key,
+          product_id: item.id_key
+        });
+      }
+
+      clearCart();
+
+      document.querySelector(".checkout-page").innerHTML = `
+        <div style="text-align:center;padding:64px 20px;">
+          <div style="width:80px;height:80px;background:#e8f5e9;border-radius:50%;display:grid;place-items:center;margin:0 auto 24px;">
+            <i class="bi bi-check-lg" style="font-size:36px;color:#2d7a3a;"></i>
+          </div>
+          <h1 style="font-size:28px;font-weight:800;margin-bottom:12px;">¡Pedido confirmado!</h1>
+          <p style="color:#666;margin-bottom:8px;">Número de pedido: <strong>#${order.id_key}</strong></p>
+          <p style="color:#666;margin-bottom:8px;">Factura: <strong>${billNum}</strong></p>
+          <p style="color:#666;font-size:14px;margin-bottom:32px;">Te contactaremos para coordinar la entrega.</p>
+          <div style="display:flex;gap:12px;justify-content:center;">
+            <a href="./profile.html" class="btn-primary">Ver mis pedidos</a>
+            <a href="./products.html" class="btn-secondary">Seguir comprando</a>
+          </div>
+        </div>`;
+    } catch(e) {
+      console.error("Error al procesar pedido:", e);
+      const msg = e.message || "Error desconocido";
+      toast("Error al procesar el pedido: " + msg, "error");
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-bag-check"></i> Confirmar pedido';
+    }
+  });
+</script>
+</body>
+</html>
