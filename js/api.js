@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "./config.js";
 
-export async function request(path, { method = "GET", body, headers } = {}) {
+export async function request(path, { method = "GET", body, headers } = {}, retries = 3) {
   const url = `${API_BASE_URL}${path}`;
   const opts = {
     method,
@@ -12,16 +12,26 @@ export async function request(path, { method = "GET", body, headers } = {}) {
     ...(body ? { body: JSON.stringify(body) } : {}),
   };
 
-  const res = await fetch(url, opts);
-  const contentType = res.headers.get("content-type") || "";
-  const isJson = contentType.includes("application/json");
-  const data = isJson ? await res.json().catch(() => null) : await res.text().catch(() => null);
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, opts);
+      const contentType = res.headers.get("content-type") || "";
+      const isJson = contentType.includes("application/json");
+      const data = isJson ? await res.json().catch(() => null) : await res.text().catch(() => null);
 
-  if (!res.ok) {
-    const msg = typeof data === "string" ? data : (data?.detail || JSON.stringify(data));
-    throw new Error(msg || `HTTP ${res.status}`);
+      if (!res.ok) {
+        const msg = typeof data === "string" ? data : (data?.detail || JSON.stringify(data));
+        throw new Error(msg || `HTTP ${res.status}`);
+      }
+      return data;
+    } catch (err) {
+      const isLast = attempt === retries;
+      const isNetworkError = err.message === "Failed to fetch" || err.name === "TypeError";
+      if (isLast || !isNetworkError) throw err;
+      // Esperar antes de reintentar (1s, 2s)
+      await new Promise(r => setTimeout(r, attempt * 1000));
+    }
   }
-  return data;
 }
 
 // ── PRODUCTS ──────────────────────────────────────────

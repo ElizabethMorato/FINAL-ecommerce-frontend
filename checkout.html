@@ -200,7 +200,7 @@
   // Confirmar pedido
   document.getElementById("placeOrderBtn").addEventListener("click", async () => {
     const btn = document.getElementById("placeOrderBtn");
-    btn.disabled = true; btn.textContent = "Procesando...";
+    btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Procesando... (puede tardar hasta 60 seg)';
 
     const deliveryMethod = parseInt(document.querySelector("input[name=delivery]:checked")?.value || "3");
     const street = document.getElementById("chkStreet").value.trim();
