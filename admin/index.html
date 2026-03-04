@@ -52,6 +52,7 @@
           <thead><tr><th>#</th><th>Cliente</th><th>Total</th><th>Estado</th></tr></thead>
           <tbody id="recentOrders"><tr><td colspan="4" style="text-align:center;padding:20px;color:#999;">Cargando...</td></tr></tbody>
         </table>
+        <div style="text-align:center;padding:10px;"><button id="verMasOrders" style="display:none;background:none;border:1.5px solid #e8e8e8;border-radius:8px;padding:8px 20px;cursor:pointer;font-size:13px;color:#666;">Ver más pedidos ↓</button></div>
       </div>
 
       <!-- Stock bajo -->
@@ -64,6 +65,7 @@
           <thead><tr><th>Producto</th><th>Stock</th><th>Precio</th></tr></thead>
           <tbody id="lowStock"><tr><td colspan="3" style="text-align:center;padding:20px;color:#999;">Cargando...</td></tr></tbody>
         </table>
+        <div style="text-align:center;padding:10px;"><button id="verMasStock" style="display:none;background:none;border:1.5px solid #e8e8e8;border-radius:8px;padding:8px 20px;cursor:pointer;font-size:13px;color:#666;">Ver más productos ↓</button></div>
       </div>
     </div>
 
@@ -100,25 +102,41 @@
 
     // Pedidos recientes
     const tbody = document.getElementById("recentOrders");
-    const recent = orders.slice(-5).reverse();
-    tbody.innerHTML = recent.length ? recent.map(o => {
-      const client = clients.find(c => c.id_key === o.client_id);
-      return `<tr>
-        <td><strong>#${o.id_key}</strong></td>
-        <td>${client ? `${client.name} ${client.lastname}` : `Cliente #${o.client_id}`}</td>
-        <td>${formatPrice(o.total)}</td>
-        <td><span class="order-status-badge status-${o.status}">${ORDER_STATUS[o.status]}</span></td>
-      </tr>`;
-    }).join("") : `<tr><td colspan="4" style="text-align:center;color:#999;padding:20px;">Sin pedidos</td></tr>`;
+    const allRecent = [...orders].reverse();
+    let showOrders = 10;
+    function renderRecentOrders() {
+      const visible = allRecent.slice(0, showOrders);
+      tbody.innerHTML = visible.length ? visible.map(o => {
+        const client = clients.find(c => c.id_key === o.client_id);
+        return `<tr>
+          <td><strong>#${o.id_key}</strong></td>
+          <td>${client ? `${client.name} ${client.lastname}` : `Cliente #${o.client_id}`}</td>
+          <td>${formatPrice(o.total)}</td>
+          <td><span class="order-status-badge status-${o.status}">${ORDER_STATUS[o.status]}</span></td>
+        </tr>`;
+      }).join("") : `<tr><td colspan="4" style="text-align:center;color:#999;padding:20px;">Sin pedidos</td></tr>`;
+      const verMasOrders = document.getElementById("verMasOrders");
+      if (verMasOrders) verMasOrders.style.display = showOrders >= allRecent.length ? "none" : "";
+    }
+    renderRecentOrders();
+    document.getElementById("verMasOrders")?.addEventListener("click", () => { showOrders += 10; renderRecentOrders(); });
 
     // Stock bajo
     const low = products.filter(p => p.stock <= 5).sort((a,b) => a.stock - b.stock);
-    document.getElementById("lowStock").innerHTML = low.length ? low.map(p => `
-      <tr>
-        <td>${p.name}</td>
-        <td><span class="order-status-badge ${p.stock===0?"status-4":"status-1"}">${p.stock}</span></td>
-        <td>${formatPrice(p.price)}</td>
-      </tr>`).join("") : `<tr><td colspan="3" style="text-align:center;color:#2d7a3a;padding:20px;">✓ Todo bien</td></tr>`;
+    let showStock = 10;
+    function renderLowStock() {
+      const visible = low.slice(0, showStock);
+      document.getElementById("lowStock").innerHTML = visible.length ? visible.map(p => `
+        <tr>
+          <td>${p.name}</td>
+          <td><span class="order-status-badge ${p.stock===0?"status-4":"status-1"}">${p.stock}</span></td>
+          <td>${formatPrice(p.price)}</td>
+        </tr>`).join("") : `<tr><td colspan="3" style="text-align:center;color:#2d7a3a;padding:20px;">✓ Todo bien</td></tr>`;
+      const verMasStock = document.getElementById("verMasStock");
+      if (verMasStock) verMasStock.style.display = showStock >= low.length ? "none" : "";
+    }
+    renderLowStock();
+    document.getElementById("verMasStock")?.addEventListener("click", () => { showStock += 10; renderLowStock(); });
 
     // Stats de estado
     const statusCount = {};

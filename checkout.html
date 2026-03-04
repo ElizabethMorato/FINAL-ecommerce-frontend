@@ -233,10 +233,11 @@
       // 1. Crear factura
       const bill = await createBill({
         bill_number: billNum,
-        discount: 0,
+        discount: null,
         date: today,
         total: total,
         payment_type: selectedPayment === "card" ? 2 : 1,
+        client_id: session.id_key,
       });
 
       // 2. Crear pedido

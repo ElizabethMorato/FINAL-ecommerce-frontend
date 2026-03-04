@@ -147,7 +147,7 @@
         </a>
         <div class="detail-desc" style="margin-top:28px;padding-top:20px;border-top:1px solid #e8e8e8;">
           <h3>Descripción</h3>
-          <p>Producto de calidad premium para tu hogar u oficina. Diseñado para durar, con materiales seleccionados y acabados de primera. Ideal para espacios modernos y funcionales.</p>
+          <p style="white-space:pre-line;">${product.description || "Sin descripción disponible."}</p>
         </div>
         <div style="margin-top:20px;display:flex;gap:20px;flex-wrap:wrap;">
           <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#666;">
@@ -220,6 +220,7 @@
     document.getElementById("submitReview")?.addEventListener("click", async () => {
       const comment = document.getElementById("reviewComment").value.trim();
       try {
+        const session = (await import("./js/auth.js")).getSession();
         await createReview({ rating: selectedRating, comment, product_id: product.id_key });
         toast("¡Reseña publicada!", "success");
         setTimeout(() => location.reload(), 1000);
