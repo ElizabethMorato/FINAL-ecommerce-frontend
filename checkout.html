@@ -254,8 +254,16 @@
         await createAddress({ street, number, city, client_id: session.id_key }).catch(() => {});
       }
 
-      // 4. Crear detalles uno por uno
+      // 4. Verificar stock actual y crear detalles
+      const { getProduct } = await import("./js/api.js");
       for (const item of cart) {
+        const currentProduct = await getProduct(item.id_key);
+        if (currentProduct.stock < item.qty) {
+          toast(`Sin stock suficiente para "${item.name}". Stock disponible: ${currentProduct.stock}`, "error");
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-bag-check"></i> Confirmar pedido';
+          return;
+        }
         await createOrderDetail({
           quantity: item.qty,
           price: item.price,
